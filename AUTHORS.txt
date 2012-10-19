@@ -1,0 +1,10 @@
+WebImageView
+==============================
+WebImageView is primarily based on code written by Matthias Käppler from his Droid Fu project:
+https://github.com/kaeppler/droid-fu/blob/master/src/main/java/com/github/droidfu/widgets/WebImageView.java
+
+It contains significant contributions from Yelp Engineers:
+
+* Alex Pretzlav <alex@turnlav.net>
+* Greg Giacovelli <greg@yelp.com>
+* Alex Davis <alexd@yelp.com>
