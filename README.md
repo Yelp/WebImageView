@@ -53,7 +53,7 @@ public void onCreate(Bundle icicle) {
 That's it!
 ----------
 
-WebImageView does all its downloading and cache-from-disk loading in its own dedicated thread pool, so you never need to worry about it affecting scroll performance or otherwise degrating the experience of using your app.
+WebImageView does all its downloading and cache-from-disk loading in its own dedicated thread pool, so you never need to worry about it affecting scroll performance or otherwise degrading the experience of using your app.
 
 License
 -------
