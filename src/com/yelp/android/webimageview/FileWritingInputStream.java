@@ -15,11 +15,15 @@
 
 package com.yelp.android.webimageview;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.FileDescriptor;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 /**
  * A wrapper around an InputStream which writes bytes to the provided File as
@@ -31,11 +35,18 @@ import java.io.InputStream;
  */
 public class FileWritingInputStream extends FilterInputStream {
 
-	FileOutputStream mOutput;
+	private static final int BUFFER_SIZE = 4096;
+	final OutputStream mOutput;
+	final FileDescriptor mFd;
 
 	public FileWritingInputStream(InputStream stream, FileOutputStream file) throws FileNotFoundException {
-		super(stream);
-		mOutput = file;
+		super(new BufferedInputStream(stream, BUFFER_SIZE));
+		try {
+			mFd = file.getFD();
+		} catch (IOException e) {
+			throw new FileNotFoundException("Could not get file descriptor for given file.");
+		}
+		mOutput = new BufferedOutputStream(file, BUFFER_SIZE);
 	}
 
 	@Override
@@ -65,6 +76,7 @@ public class FileWritingInputStream extends FilterInputStream {
 	public void close() throws IOException {
 		super.close();
 		mOutput.flush();
+		mFd.sync();
 		mOutput.close();
 	}
 
