@@ -136,13 +136,13 @@ public class WebImageView extends ImageView {
 				loadImage(callback);
 			}
 		} else if (!TextUtils.isEmpty(url)) {
-			if (url.startsWith("bundle://")) {
-				url = url.substring("bundle://".length());
-			} else if (url.startsWith(ContentResolver.SCHEME_ANDROID_RESOURCE)) {
+			if (url.startsWith(ContentResolver.SCHEME_ANDROID_RESOURCE) || url.startsWith("file://")) {
 				// Handle android.resource:// URLs using internal logic
 				Uri uri = Uri.parse(url);
 				this.setImageURI(uri);
 				return;
+			} else if (url.startsWith("bundle://")) {
+				url = url.substring("bundle://".length());
 			}
 			int resource = getResourceForName(getContext(), url);
 			if (resource != 0) {
