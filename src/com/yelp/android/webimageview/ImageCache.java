@@ -243,6 +243,18 @@ public class ImageCache {
 	}
 
 	/**
+	 * Store a Bitmap to in-memory cache directly.
+	 * 
+ 	 * @param imageUrl
+	 *            The URL for the image to use for caching.
+	 * @param image
+	 *            The bitmap to store
+	 */
+	public void put(String imageUrl, Bitmap image) {
+		mCache.put(imageUrl, image);
+	}
+
+	/**
 	 * Writes the provided image data to on-disk cache and simultaneously
 	 * decodes it to a bitmap and stores it in the in-memory cache.
 	 *

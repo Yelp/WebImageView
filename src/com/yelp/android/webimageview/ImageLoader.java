@@ -22,7 +22,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Matrix;
+import android.media.ExifInterface;
 import android.net.ConnectivityManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -179,7 +184,29 @@ public class ImageLoader implements Runnable {
 	 *            of the cache directory
 	 */
 	public static void start(String imageUrl, ImageView imageView, boolean savePermenently) {
-		ImageLoader loader = new ImageLoader(imageUrl, imageView, savePermenently);
+		start(imageUrl, imageView, savePermenently, false);
+	}
+	
+	/**
+	 * Triggers the image loader for the given image and view. The image loading
+	 * will be performed concurrently to the UI main thread, using a fixed size
+	 * thread pool. The loaded image will be posted back to the given ImageView
+	 * upon completion.
+	 *
+	 * @param imageUrl
+	 *        the URL of the image to download
+	 * @param imageView
+	 *        the ImageView which should be updated with the new image
+	 * @param savePermanently
+	 *            If true, the provided image will be saved permanently outside
+	 *            of the cache directory
+	 * @param autoRotate
+	 *            If true, local images will be rotated automatically according 
+	 *            to exif information
+	 */
+	public static void start(String imageUrl, ImageView imageView, boolean savePermenently,
+			boolean autoRotate) {
+		ImageLoader loader = new ImageLoader(imageUrl, imageView, savePermenently, autoRotate);
 		synchronized (imageCache) {
 			Bitmap image = imageCache.get(imageUrl);
 			if (image == null) {
@@ -210,7 +237,31 @@ public class ImageLoader implements Runnable {
 	 *            of the cache directory
 	 */
 	public static void start(String imageUrl, ImageLoaderHandler handler, boolean savePermanently) {
-		ImageLoader loader = new ImageLoader(imageUrl, handler, savePermanently);
+		start(imageUrl, handler, savePermanently, false);
+	}
+	
+	/**
+	 * Triggers the image loader for the given image and handler. The image
+	 * loading will be performed concurrently to the UI main thread, using a
+	 * fixed size thread pool. The loaded image will not be automatically posted
+	 * to an ImageView; instead, you can pass a custom
+	 * {@link ImageLoaderHandler} and handle the loaded image yourself (e.g.
+	 * cache it for later use).
+	 *
+	 * @param imageUrl
+	 *            the URL of the image to download
+	 * @param handler
+	 *            the handler which is used to handle the downloaded image
+	 * @param savePermanently
+	 *            If true, the provided image will be saved permanently outside
+	 *            of the cache directory
+	 * @param autoRotate
+	 *            If true, local images will be rotated automatically according 
+	 *            to exif information
+	 */
+	public static void start(String imageUrl, ImageLoaderHandler handler, boolean savePermanently,
+			boolean autoRotate) {
+		ImageLoader loader = new ImageLoader(imageUrl, handler, savePermanently, autoRotate);
 		loader.mPriority = handler.priority;
 		Bitmap image = imageCache.get(imageUrl);
 		if (image == null) {
@@ -261,22 +312,25 @@ public class ImageLoader implements Runnable {
 	public final String imageUrl;
 	private Handler handler;
 	public final boolean cachePermanently;
+	public final boolean autoRotate;
 	private long mPriority;
 	private int mResponse;
 
 	ImageLoader(String imageUrl) {
 		this.imageUrl = imageUrl;
 		this.cachePermanently = false;
+		this.autoRotate = false;
 	}
 
-	private ImageLoader(String imageUrl, ImageView imageView, boolean cachePermanently) {
-		this(imageUrl, new ImageLoaderHandler(imageView), cachePermanently);
+	private ImageLoader(String imageUrl, ImageView imageView, boolean cachePermanently, boolean autoRotate) {
+		this(imageUrl, new ImageLoaderHandler(imageView), cachePermanently, autoRotate);
 	}
 
-	private ImageLoader(String imageUrl, ImageLoaderHandler handler, boolean cachePermanently) {
+	private ImageLoader(String imageUrl, ImageLoaderHandler handler, boolean cachePermanently, boolean autoRotate) {
 		this.imageUrl = imageUrl;
 		this.handler = handler;
 		this.cachePermanently = cachePermanently;
+		this.autoRotate = autoRotate;
 	}
 
 	public int getResponse() {
@@ -298,16 +352,25 @@ public class ImageLoader implements Runnable {
 			while (timesTried <= numAttempts) {
 				InputStream connectionStream = null;
 				try {
-					URLConnection connection = new URL(imageUrl).openConnection();
-					if (connection instanceof HttpURLConnection &&
-							(mResponse = ((HttpURLConnection)connection).getResponseCode()) > 300) {
-						return; // Otherwise it'll throw an IOException and this thread will get stuck retrying a bad URL
+					if (imageUrl.startsWith("file")) {
+						String imagePath = Uri.parse(imageUrl).getPath();
+						bitmap = BitmapFactory.decodeFile(imagePath);
+						if (autoRotate) {
+							bitmap = applyExifFileAttributes(imagePath, bitmap);
+						}
+						imageCache.put(imageUrl, bitmap);
+					} else {
+						URLConnection connection = new URL(imageUrl).openConnection();
+						if (connection instanceof HttpURLConnection &&
+								(mResponse = ((HttpURLConnection)connection).getResponseCode()) > 300) {
+							return; // Otherwise it'll throw an IOException and this thread will get stuck retrying a bad URL
+						}
+						connectionStream = connection.getInputStream();
+						if (connectionStream == null) {
+							return; // Nothing to be done ....
+						}
+						bitmap = imageCache.put(imageUrl, connectionStream, this.cachePermanently);
 					}
-					connectionStream = connection.getInputStream();
-					if (connectionStream == null) {
-						return; // Nothing to be done ....
-					}
-					bitmap = imageCache.put(imageUrl, connectionStream, this.cachePermanently);
 					break;
 				} catch (IOException e) {
 					Log.w(ImageLoader.class.getSimpleName(), "download for " + imageUrl
@@ -344,6 +407,39 @@ public class ImageLoader implements Runnable {
 		handler.sendMessage(message);
 	}
 
+	private Bitmap applyExifFileAttributes(String imagePath, Bitmap bitmap) throws IOException {
+		ExifInterface exif = new ExifInterface(imagePath);
+		int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION,
+				ExifInterface.ORIENTATION_NORMAL);
+		int rotate = 0;
+		switch (orientation) {
+			case ExifInterface.ORIENTATION_ROTATE_270:
+				rotate += 90;
+				// and then some
+			case ExifInterface.ORIENTATION_ROTATE_180:
+				rotate += 90;
+				// and then some
+			case ExifInterface.ORIENTATION_ROTATE_90:
+				// and then some
+				rotate += 90;
+				if (bitmap.isMutable()) {
+					// Rotate the image in place if possible
+					Canvas canvas = new Canvas(bitmap);
+					canvas.rotate(rotate);
+				} else {
+					// Otherwise decode a copy that is rotated
+					Matrix matrix = new Matrix();
+					matrix.postRotate(rotate);
+					Bitmap newBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(),
+							bitmap.getHeight(), matrix, true);
+					bitmap.recycle();
+					bitmap = newBitmap;
+				}
+			default:
+				break;
+		}
+		return bitmap;
+	}
 
 	/**
 	 * A Pausable Threadpool Executor taken from the javadocs for ThreadPoolExecutor.
