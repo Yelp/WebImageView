@@ -184,29 +184,7 @@ public class ImageLoader implements Runnable {
 	 *            of the cache directory
 	 */
 	public static void start(String imageUrl, ImageView imageView, boolean savePermenently) {
-		start(imageUrl, imageView, savePermenently, false);
-	}
-	
-	/**
-	 * Triggers the image loader for the given image and view. The image loading
-	 * will be performed concurrently to the UI main thread, using a fixed size
-	 * thread pool. The loaded image will be posted back to the given ImageView
-	 * upon completion.
-	 *
-	 * @param imageUrl
-	 *        the URL of the image to download
-	 * @param imageView
-	 *        the ImageView which should be updated with the new image
-	 * @param savePermanently
-	 *            If true, the provided image will be saved permanently outside
-	 *            of the cache directory
-	 * @param autoRotate
-	 *            If true, local images will be rotated automatically according 
-	 *            to exif information
-	 */
-	public static void start(String imageUrl, ImageView imageView, boolean savePermenently,
-			boolean autoRotate) {
-		ImageLoader loader = new ImageLoader(imageUrl, imageView, savePermenently, autoRotate);
+		ImageLoader loader = new ImageLoader(imageUrl, imageView, savePermenently);
 		synchronized (imageCache) {
 			Bitmap image = imageCache.get(imageUrl);
 			if (image == null) {
@@ -237,31 +215,7 @@ public class ImageLoader implements Runnable {
 	 *            of the cache directory
 	 */
 	public static void start(String imageUrl, ImageLoaderHandler handler, boolean savePermanently) {
-		start(imageUrl, handler, savePermanently, false);
-	}
-	
-	/**
-	 * Triggers the image loader for the given image and handler. The image
-	 * loading will be performed concurrently to the UI main thread, using a
-	 * fixed size thread pool. The loaded image will not be automatically posted
-	 * to an ImageView; instead, you can pass a custom
-	 * {@link ImageLoaderHandler} and handle the loaded image yourself (e.g.
-	 * cache it for later use).
-	 *
-	 * @param imageUrl
-	 *            the URL of the image to download
-	 * @param handler
-	 *            the handler which is used to handle the downloaded image
-	 * @param savePermanently
-	 *            If true, the provided image will be saved permanently outside
-	 *            of the cache directory
-	 * @param autoRotate
-	 *            If true, local images will be rotated automatically according 
-	 *            to exif information
-	 */
-	public static void start(String imageUrl, ImageLoaderHandler handler, boolean savePermanently,
-			boolean autoRotate) {
-		ImageLoader loader = new ImageLoader(imageUrl, handler, savePermanently, autoRotate);
+		ImageLoader loader = new ImageLoader(imageUrl, handler, savePermanently);
 		loader.mPriority = handler.priority;
 		Bitmap image = imageCache.get(imageUrl);
 		if (image == null) {
@@ -312,25 +266,22 @@ public class ImageLoader implements Runnable {
 	public final String imageUrl;
 	private Handler handler;
 	public final boolean cachePermanently;
-	public final boolean autoRotate;
 	private long mPriority;
 	private int mResponse;
 
 	ImageLoader(String imageUrl) {
 		this.imageUrl = imageUrl;
 		this.cachePermanently = false;
-		this.autoRotate = false;
 	}
 
-	private ImageLoader(String imageUrl, ImageView imageView, boolean cachePermanently, boolean autoRotate) {
-		this(imageUrl, new ImageLoaderHandler(imageView), cachePermanently, autoRotate);
+	private ImageLoader(String imageUrl, ImageView imageView, boolean cachePermanently) {
+		this(imageUrl, new ImageLoaderHandler(imageView), cachePermanently);
 	}
 
-	private ImageLoader(String imageUrl, ImageLoaderHandler handler, boolean cachePermanently, boolean autoRotate) {
+	private ImageLoader(String imageUrl, ImageLoaderHandler handler, boolean cachePermanently) {
 		this.imageUrl = imageUrl;
 		this.handler = handler;
 		this.cachePermanently = cachePermanently;
-		this.autoRotate = autoRotate;
 	}
 
 	public int getResponse() {
@@ -355,9 +306,7 @@ public class ImageLoader implements Runnable {
 					if (imageUrl.startsWith("file")) {
 						String imagePath = Uri.parse(imageUrl).getPath();
 						bitmap = BitmapFactory.decodeFile(imagePath);
-						if (autoRotate) {
-							bitmap = applyExifFileAttributes(imagePath, bitmap);
-						}
+						bitmap = applyExifFileAttributes(imagePath, bitmap);
 						imageCache.put(imageUrl, bitmap);
 					} else {
 						URLConnection connection = new URL(imageUrl).openConnection();

@@ -22,10 +22,5 @@
 		<attr name="savePermanently" format="boolean"/>
 		<!--  Specifies the Priority of the image. Lower values should be loaded first -->
 		<attr name="image_priority" format="integer"/>
-		<!--  
-			Specifies whether local images should be automatically rotated according 
-			to exif information
-		-->
-		<attr name="autorotate" format="boolean"/>
 	</declare-styleable>
 </resources>

@@ -57,7 +57,6 @@ public class WebImageView extends ImageView {
 	private boolean mLoaded;
 	private boolean mSavePermanently;
 	private long mPriority;
-	private boolean mAutoRotate;
 
 
 	public WebImageView(Context context, AttributeSet attributes) {
@@ -73,7 +72,6 @@ public class WebImageView extends ImageView {
 		setLoadingDrawable(array.getDrawable(R.styleable.WebImageView_loading));
 		mSavePermanently = array.getBoolean(R.styleable.WebImageView_savePermanently, false);
 		mPriority = array.getInt(R.styleable.WebImageView_image_priority, 20);
-		mAutoRotate = array.getBoolean(R.styleable.WebImageView_autorotate, false);
 		String url = array.getString(R.styleable.WebImageView_imageUrl);
 		boolean autoLoad = array.getBoolean(R.styleable.WebImageView_autoload, !TextUtils.isEmpty(url));
 		setImageUrl(url, autoLoad, null);
@@ -94,17 +92,6 @@ public class WebImageView extends ImageView {
 	public void setSavePermanently(boolean savePermanently) {
 		mSavePermanently = savePermanently;
 	}
-
-	/**
-	 * Sets whether local images should be automatically rotated according to its
-	 * exif attributes. Defaults to false. Must be set before the image is 
-	 * downloaded.
-	 * 
-	 * @param autoRotate
-	 */
-	public void setAutoRotate(boolean autoRotate) {
-		mAutoRotate = autoRotate;
-	} 
 
 	/**
 	 * Sets the relative priority of the image loading. Lower
@@ -208,8 +195,7 @@ public class WebImageView extends ImageView {
 		if (!mLoaded) {
 			setImageDrawable(mLoadingDrawable);
 			ImageLoader.start(mUrl, new WebImageLoaderHandler(mUrl, this,
-					(Long.MAX_VALUE - SystemClock.elapsedRealtime()) + mPriority, callback), 
-					mSavePermanently, mAutoRotate);
+					(Long.MAX_VALUE - SystemClock.elapsedRealtime()) + mPriority, callback), mSavePermanently);
 		}
 	}
 
