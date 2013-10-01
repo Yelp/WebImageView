@@ -105,30 +105,44 @@ public class WebImageView extends ImageView {
 	/**
 	 * Sets the WebView's url that its content should be displayed from and
 	 * automatically download and display it.
+	 * 
 	 * @param url the url where the image content is located.
 	 */
 	public void setImageUrl(String url) {
-		setImageUrl(url, true, null);
+		setImageUrl(url, 0, 0);
+	}
+
+	public void setImageUrl(String url, int reqWidth, int reqHeight) {
+		setImageUrl(url, true, null, reqWidth, reqHeight);
 	}
 
 	/**
-	 * Sets the WebView's url that its content should be displayed from
-	 * and if the url is not valid, use the given resource as a placeholder.
-	 * Very convenient for when you know the url may be null or empty.
-	 *
+	 * Sets the WebView's url that its content should be displayed from and if
+	 * the url is not valid, use the given resource as a placeholder. Very
+	 * convenient for when you know the url may be null or empty.
+	 * 
 	 * @param url the url where the image content is located
-	 * @param blank the image resource that should be loaded in the case
-	 * where the url itself is empty.
+	 * @param blank the image resource that should be loaded in the case where
+	 *            the url itself is empty.
 	 */
 	public void setImageUrl(String url, int blank) {
+		setImageUrl(url, blank, 0, 0);
+	}
+
+	public void setImageUrl(String url, int blank, int reqWidth, int reqHeight) {
 		if (TextUtils.isEmpty(url)) {
 			setImageResource(blank);
 		} else {
-			setImageUrl(url);
+			setImageUrl(url, reqWidth, reqHeight);
 		}
 	}
 
 	public void setImageUrl(String url, boolean load, ImageLoadedCallback callback) {
+		setImageUrl(url, load, callback, 0, 0);
+	}
+
+	public void setImageUrl(String url, boolean load, ImageLoadedCallback callback, int reqWidth,
+			int reqHeight) {
 		reset();
 		if (!TextUtils.isEmpty(url) && url.startsWith("http")) {
 			mUrl = url;
@@ -136,10 +150,20 @@ public class WebImageView extends ImageView {
 				loadImage(callback);
 			}
 		} else if (!TextUtils.isEmpty(url)) {
-			if (url.startsWith(ContentResolver.SCHEME_ANDROID_RESOURCE) || url.startsWith("file://")) {
+			if (url.startsWith(ContentResolver.SCHEME_ANDROID_RESOURCE)) {
 				// Handle android.resource:// URLs using internal logic
 				Uri uri = Uri.parse(url);
-				this.setImageURI(uri);
+				setImageURI(uri);
+				return;
+			} else if (url.startsWith("file://")) {
+				Uri uri = Uri.parse(url);
+				String filename = uri.getPath();
+				BitmapFactory.Options options = new BitmapFactory.Options();
+				if (reqWidth > 0 && reqHeight > 0) {
+					options.inSampleSize = calculateInSampleSize(filename, reqWidth, reqHeight);
+				}
+				Bitmap bitmap = BitmapFactory.decodeFile(filename, options);
+				setImageBitmap(bitmap);
 				return;
 			} else if (url.startsWith("bundle://")) {
 				url = url.substring("bundle://".length());
@@ -149,6 +173,27 @@ public class WebImageView extends ImageView {
 				setImageResource(resource);
 			}
 		}
+	}
+
+	private static int calculateInSampleSize(String filename, int reqWidth, int reqHeight) {
+		BitmapFactory.Options options = new BitmapFactory.Options();
+		options.inJustDecodeBounds = true;
+		BitmapFactory.decodeFile(filename, options);
+		// Raw height and width of image
+		final int height = options.outHeight;
+		final int width = options.outWidth;
+		int inSampleSize = 1;
+		if (height > reqHeight || width > reqWidth) {
+			// Calculate ratios of height and width to requested height and
+			// width
+			final int heightRatio = Math.round((float) height / (float) reqHeight);
+			final int widthRatio = Math.round((float) width / (float) reqWidth);
+			// Choose the smallest ratio as inSampleSize value, this will
+			// guarantee a final image with both dimensions larger than or equal
+			// to the requested height and width.
+			inSampleSize = heightRatio < widthRatio ? heightRatio : widthRatio;
+		}
+		return inSampleSize;
 	}
 
 	/**
