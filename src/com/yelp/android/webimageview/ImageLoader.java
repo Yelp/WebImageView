@@ -22,7 +22,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Matrix;
+import android.media.ExifInterface;
 import android.net.ConnectivityManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -298,16 +303,23 @@ public class ImageLoader implements Runnable {
 			while (timesTried <= numAttempts) {
 				InputStream connectionStream = null;
 				try {
-					URLConnection connection = new URL(imageUrl).openConnection();
-					if (connection instanceof HttpURLConnection &&
-							(mResponse = ((HttpURLConnection)connection).getResponseCode()) > 300) {
-						return; // Otherwise it'll throw an IOException and this thread will get stuck retrying a bad URL
+					if (imageUrl.startsWith("file")) {
+						String imagePath = Uri.parse(imageUrl).getPath();
+						bitmap = BitmapFactory.decodeFile(imagePath);
+						bitmap = applyExifFileAttributes(imagePath, bitmap);
+						imageCache.put(imageUrl, bitmap);
+					} else {
+						URLConnection connection = new URL(imageUrl).openConnection();
+						if (connection instanceof HttpURLConnection &&
+								(mResponse = ((HttpURLConnection)connection).getResponseCode()) > 300) {
+							return; // Otherwise it'll throw an IOException and this thread will get stuck retrying a bad URL
+						}
+						connectionStream = connection.getInputStream();
+						if (connectionStream == null) {
+							return; // Nothing to be done ....
+						}
+						bitmap = imageCache.put(imageUrl, connectionStream, this.cachePermanently);
 					}
-					connectionStream = connection.getInputStream();
-					if (connectionStream == null) {
-						return; // Nothing to be done ....
-					}
-					bitmap = imageCache.put(imageUrl, connectionStream, this.cachePermanently);
 					break;
 				} catch (IOException e) {
 					Log.w(ImageLoader.class.getSimpleName(), "download for " + imageUrl
@@ -344,6 +356,39 @@ public class ImageLoader implements Runnable {
 		handler.sendMessage(message);
 	}
 
+	private Bitmap applyExifFileAttributes(String imagePath, Bitmap bitmap) throws IOException {
+		ExifInterface exif = new ExifInterface(imagePath);
+		int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION,
+				ExifInterface.ORIENTATION_NORMAL);
+		int rotate = 0;
+		switch (orientation) {
+			case ExifInterface.ORIENTATION_ROTATE_270:
+				rotate += 90;
+				// and then some
+			case ExifInterface.ORIENTATION_ROTATE_180:
+				rotate += 90;
+				// and then some
+			case ExifInterface.ORIENTATION_ROTATE_90:
+				// and then some
+				rotate += 90;
+				if (bitmap.isMutable()) {
+					// Rotate the image in place if possible
+					Canvas canvas = new Canvas(bitmap);
+					canvas.rotate(rotate);
+				} else {
+					// Otherwise decode a copy that is rotated
+					Matrix matrix = new Matrix();
+					matrix.postRotate(rotate);
+					Bitmap newBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(),
+							bitmap.getHeight(), matrix, true);
+					bitmap.recycle();
+					bitmap = newBitmap;
+				}
+			default:
+				break;
+		}
+		return bitmap;
+	}
 
 	/**
 	 * A Pausable Threadpool Executor taken from the javadocs for ThreadPoolExecutor.

@@ -144,7 +144,7 @@ public class WebImageView extends ImageView {
 	public void setImageUrl(String url, boolean load, ImageLoadedCallback callback, int reqWidth,
 			int reqHeight) {
 		reset();
-		if (!TextUtils.isEmpty(url) && url.startsWith("http")) {
+		if (!TextUtils.isEmpty(url) && (url.startsWith("http") || url.startsWith("file"))) {
 			mUrl = url;
 			if (load) {
 				loadImage(callback);
