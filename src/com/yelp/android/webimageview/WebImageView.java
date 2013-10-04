@@ -163,8 +163,14 @@ public class WebImageView extends ImageView {
 				if (reqWidth > 0 && reqHeight > 0) {
 					options.inSampleSize = calculateInSampleSize(filename, reqWidth, reqHeight);
 				}
-				Bitmap bitmap = BitmapFactory.decodeFile(filename, options);
-				setImageBitmap(bitmap);
+				if (!setImageFromFile(filename, options)) {
+					// Sub-sample once, try again. If that fails, just give up.
+					if (options.inSampleSize == 0) {
+						options.inSampleSize = 1;
+					}
+					options.inSampleSize <<= 1;
+					setImageFromFile(filename, options);
+				}
 				return;
 			} else if (url.startsWith("bundle://")) {
 				url = url.substring("bundle://".length());
@@ -174,6 +180,16 @@ public class WebImageView extends ImageView {
 				setImageResource(resource);
 			}
 		}
+	}
+	
+	private boolean setImageFromFile(String filename, BitmapFactory.Options options) {
+		try {
+			Bitmap bitmap = BitmapFactory.decodeFile(filename, options);
+			setImageBitmap(bitmap);
+		} catch (OutOfMemoryError e) {
+			return false;
+		}
+		return true;
 	}
 
 	private static int calculateInSampleSize(String filename, int reqWidth, int reqHeight) {
