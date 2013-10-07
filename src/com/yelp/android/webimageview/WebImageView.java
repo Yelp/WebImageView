@@ -17,7 +17,6 @@ package com.yelp.android.webimageview;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.TypedArray;
-import android.graphics.BitmapFactory;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
@@ -58,6 +57,8 @@ public class WebImageView extends ImageView {
 	private boolean mLoaded;
 	private boolean mSavePermanently;
 	private long mPriority;
+	private int mReqWidth;
+	private int mReqHeight;
 
 
 	public WebImageView(Context context, AttributeSet attributes) {
@@ -145,56 +146,26 @@ public class WebImageView extends ImageView {
 	public void setImageUrl(String url, boolean load, ImageLoadedCallback callback, int reqWidth,
 			int reqHeight) {
 		reset();
-		if (!TextUtils.isEmpty(url) && url.startsWith("http")) {
+		if (TextUtils.isEmpty(url)) {
+			return;
+		} else if (url.startsWith("http") || url.startsWith("file://")) {
 			mUrl = url;
+			mReqWidth = reqWidth;
+			mReqHeight = reqHeight;
 			if (load) {
 				loadImage(callback);
 			}
-		} else if (!TextUtils.isEmpty(url)) {
-			if (url.startsWith(ContentResolver.SCHEME_ANDROID_RESOURCE)) {
-				// Handle android.resource:// URLs using internal logic
-				Uri uri = Uri.parse(url);
-				setImageURI(uri);
-				return;
-			} else if (url.startsWith("file://")) {
-				Uri uri = Uri.parse(url);
-				String filename = uri.getPath();
-				BitmapFactory.Options options = new BitmapFactory.Options();
-				if (reqWidth > 0 && reqHeight > 0) {
-					options.inSampleSize = calculateInSampleSize(filename, reqWidth, reqHeight);
-				}
-				Bitmap bitmap = BitmapFactory.decodeFile(filename, options);
-				setImageBitmap(bitmap);
-				return;
-			} else if (url.startsWith("bundle://")) {
-				url = url.substring("bundle://".length());
-			}
+		} else if (url.startsWith(ContentResolver.SCHEME_ANDROID_RESOURCE)) {
+			// Handle android.resource:// URLs using internal logic
+			Uri uri = Uri.parse(url);
+			setImageURI(uri);
+		} else if (url.startsWith("bundle://")) {
+			url = url.substring("bundle://".length());
 			int resource = getResourceForName(getContext(), url);
 			if (resource != 0) {
 				setImageResource(resource);
 			}
 		}
-	}
-
-	private static int calculateInSampleSize(String filename, int reqWidth, int reqHeight) {
-		BitmapFactory.Options options = new BitmapFactory.Options();
-		options.inJustDecodeBounds = true;
-		BitmapFactory.decodeFile(filename, options);
-		// Raw height and width of image
-		final int height = options.outHeight;
-		final int width = options.outWidth;
-		int inSampleSize = 1;
-		if (height > reqHeight || width > reqWidth) {
-			// Calculate ratios of height and width to requested height and
-			// width
-			final int heightRatio = Math.round((float) height / (float) reqHeight);
-			final int widthRatio = Math.round((float) width / (float) reqWidth);
-			// Choose the smallest ratio as inSampleSize value, this will
-			// guarantee a final image with both dimensions larger than or equal
-			// to the requested height and width.
-			inSampleSize = heightRatio < widthRatio ? heightRatio : widthRatio;
-		}
-		return inSampleSize;
 	}
 
 	/**
@@ -240,7 +211,7 @@ public class WebImageView extends ImageView {
 
 		if (!mLoaded) {
 			setImageDrawable(mLoadingDrawable);
-			ImageLoader.start(mUrl, new WebImageLoaderHandler(mUrl, this,
+			ImageLoader.start(mUrl, mReqWidth, mReqHeight, new WebImageLoaderHandler(mUrl, this,
 					(Long.MAX_VALUE - SystemClock.elapsedRealtime()) + mPriority, callback), mSavePermanently);
 		}
 	}

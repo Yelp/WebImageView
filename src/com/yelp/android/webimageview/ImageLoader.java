@@ -22,7 +22,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Matrix;
+import android.media.ExifInterface;
 import android.net.ConnectivityManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -106,7 +111,8 @@ public class ImageLoader implements Runnable {
 		if (executor == null) {
 			REQUESTS = new ReferenceWatcher<ImageLoader>();
 			final int MAX_IMAGE_REQUEST_SIZE = 100;
-			final PriorityBlockingQueue<? extends Runnable> queue = new BoundPriorityBlockingQueue<ImageLoader>(MAX_IMAGE_REQUEST_SIZE, DEFAULT_POOL_SIZE * 12, COMPARE);
+			final PriorityBlockingQueue<? extends Runnable> queue = 
+					new BoundPriorityBlockingQueue<ImageLoader>(MAX_IMAGE_REQUEST_SIZE, DEFAULT_POOL_SIZE * 12, COMPARE);
 
 			executor = new PausableThreadPoolExecutor (DEFAULT_POOL_SIZE, DEFAULT_POOL_SIZE, 300, TimeUnit.MILLISECONDS, queue);
 			executor.setThreadFactory(new ThreadFactory() {
@@ -210,8 +216,35 @@ public class ImageLoader implements Runnable {
 	 *            of the cache directory
 	 */
 	public static void start(String imageUrl, ImageLoaderHandler handler, boolean savePermanently) {
+		start(imageUrl, 0, 0, handler, savePermanently);
+	}
+
+	/**
+	 * Triggers the image loader for the given image and handler. The image
+	 * loading will be performed concurrently to the UI main thread, using a
+	 * fixed size thread pool. The loaded image will not be automatically posted
+	 * to an ImageView; instead, you can pass a custom
+	 * {@link ImageLoaderHandler} and handle the loaded image yourself (e.g.
+	 * cache it for later use).
+	 *
+	 * @param imageUrl
+	 *            the URL of the image to download
+	 * @param reqWidth 
+	 *            the required width of the image
+	 * @param reqHeight
+	 *            the required height of the image
+	 * @param handler
+	 *            the handler which is used to handle the downloaded image
+	 * @param savePermanently
+	 *            If true, the provided image will be saved permanently outside
+	 *            of the cache directory
+	 */
+	public static void start(String imageUrl, int reqWidth, int reqHeight, ImageLoaderHandler handler, 
+			boolean savePermanently) {
 		ImageLoader loader = new ImageLoader(imageUrl, handler, savePermanently);
 		loader.mPriority = handler.priority;
+		loader.mReqWidth = reqWidth;
+		loader.mReqHeight = reqHeight;
 		Bitmap image = imageCache.get(imageUrl);
 		if (image == null) {
 			// fetch the image in the background
@@ -263,6 +296,8 @@ public class ImageLoader implements Runnable {
 	public final boolean cachePermanently;
 	private long mPriority;
 	private int mResponse;
+	private int mReqWidth;
+	private int mReqHeight;
 
 	ImageLoader(String imageUrl) {
 		this.imageUrl = imageUrl;
@@ -291,9 +326,21 @@ public class ImageLoader implements Runnable {
 	public void run() {
 		REQUESTS.watch(this);
 		Bitmap bitmap = null;
+		if (!TextUtils.isEmpty(imageUrl) && imageUrl.startsWith("file")) {
+			Uri uri = Uri.parse(imageUrl);
+			String filename = uri.getPath();
+			BitmapFactory.Options options = new BitmapFactory.Options();
+			if (mReqWidth > 0 && mReqHeight > 0) {
+				options.inSampleSize = calculateInSampleSize(filename, mReqWidth, mReqHeight);
+			}
+			bitmap = BitmapFactory.decodeFile(filename, options);
+			bitmap = applyExifFileAttributes(filename, bitmap);
+			notifyImageLoaded(bitmap);
+			return;
+		}
 		int timesTried = 1;
 		// Check file-based cache on background thread
-		bitmap = imageCache.getBitmap(this.imageUrl);
+		bitmap = imageCache.getBitmap(imageUrl);
 		if (bitmap == null) {
 			while (timesTried <= numAttempts) {
 				InputStream connectionStream = null;
@@ -344,6 +391,68 @@ public class ImageLoader implements Runnable {
 		handler.sendMessage(message);
 	}
 
+	private static int calculateInSampleSize(String filename, int reqWidth, int reqHeight) {
+		BitmapFactory.Options options = new BitmapFactory.Options();
+		options.inJustDecodeBounds = true;
+		BitmapFactory.decodeFile(filename, options);
+		// Raw height and width of image
+		final int height = options.outHeight;
+		final int width = options.outWidth;
+		int inSampleSize = 1;
+		if (height > reqHeight || width > reqWidth) {
+			// Calculate ratios of height and width to requested height and
+			// width
+			final int heightRatio = Math.round((float) height / (float) reqHeight);
+			final int widthRatio = Math.round((float) width / (float) reqWidth);
+			// Choose the smallest ratio as inSampleSize value, this will
+			// guarantee a final image with both dimensions larger than or equal
+			// to the requested height and width.
+			inSampleSize = heightRatio < widthRatio ? heightRatio : widthRatio;
+		}
+		return inSampleSize;
+	}
+
+	private Bitmap applyExifFileAttributes(String imagePath, Bitmap bitmap) {
+		ExifInterface exif;
+		try {
+			// Try to obtain EXIF information
+			exif = new ExifInterface(imagePath);
+		} catch (IOException e) {
+			// If it fails, return the original bitmap
+			return bitmap;
+		}
+
+		int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION,
+				ExifInterface.ORIENTATION_NORMAL);
+		int rotate = 0;
+		switch (orientation) {
+			case ExifInterface.ORIENTATION_ROTATE_270:
+				rotate += 90;
+				// and then some
+			case ExifInterface.ORIENTATION_ROTATE_180:
+				rotate += 90;
+				// and then some
+			case ExifInterface.ORIENTATION_ROTATE_90:
+				// and then some
+				rotate += 90;
+				if (bitmap.isMutable()) {
+					// Rotate the image in place if possible
+					Canvas canvas = new Canvas(bitmap);
+					canvas.rotate(rotate);
+				} else {
+					// Otherwise decode a copy that is rotated
+					Matrix matrix = new Matrix();
+					matrix.postRotate(rotate);
+					Bitmap newBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(),
+							bitmap.getHeight(), matrix, true);
+					bitmap.recycle();
+					bitmap = newBitmap;
+				}
+			default:
+				break;
+		}
+		return bitmap;
+	}
 
 	/**
 	 * A Pausable Threadpool Executor taken from the javadocs for ThreadPoolExecutor.
@@ -402,8 +511,6 @@ public class ImageLoader implements Runnable {
 				mLock.unlock();
 			}
 		}
-
-
 	}
 
 	/**
