@@ -133,6 +133,9 @@ public class WebImageView extends ImageView {
 
 	public void setImageUrl(String url, int blank, int reqWidth, int reqHeight) {
 		if (TextUtils.isEmpty(url)) {
+			// Call reset() to unset the URL and prevent the loader thread from
+			// overwriting the blank resource
+			reset();
 			setImageResource(blank);
 		} else {
 			setImageUrl(url, reqWidth, reqHeight);
