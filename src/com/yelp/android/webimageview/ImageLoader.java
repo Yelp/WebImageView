@@ -345,10 +345,30 @@ public class ImageLoader implements Runnable {
 			while (timesTried <= numAttempts) {
 				InputStream connectionStream = null;
 				try {
-					URLConnection connection = new URL(imageUrl).openConnection();
-					if (connection instanceof HttpURLConnection &&
-							(mResponse = ((HttpURLConnection)connection).getResponseCode()) > 300) {
-						return; // Otherwise it'll throw an IOException and this thread will get stuck retrying a bad URL
+					URLConnection connection;
+					URL url = new URL(imageUrl);
+					int numRedirects = 0;
+					while (true) {
+						connection = url.openConnection();
+						if (connection instanceof HttpURLConnection) {
+							HttpURLConnection httpConnection = (HttpURLConnection) connection;
+							mResponse = httpConnection.getResponseCode();
+							if (mResponse == 301 || mResponse == 302 || mResponse == 307) {
+								// 301 Moved Permanently, 302 Found, 307 Temporary Redirect
+								// Forward 3 redirects across HTTP/HTTPS protocols
+								url = connection.getURL();
+								numRedirects++;
+								if (numRedirects > 3 || url == null) {
+									return;
+								}
+								continue;
+							} else if (mResponse > 300) {
+								// Catch bad response codes or thisthread will get stuck 
+								// retrying a bad URL
+								return;
+							}
+						}
+						break;
 					}
 					connectionStream = connection.getInputStream();
 					if (connectionStream == null) {
