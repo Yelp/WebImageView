@@ -19,6 +19,8 @@ import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
 /**
  * An ImageLoaderHandler both handles the receiving of an image and acts as a
@@ -45,7 +47,13 @@ public class ImageLoaderHandler extends Handler {
         if (msg.what == ImageLoader.HANDLER_MESSAGE_ID) {
             Bundle data = msg.getData();
             Bitmap bitmap = data.getParcelable(ImageLoader.BITMAP_EXTRA);
+            boolean isAsync = data.getBoolean(ImageLoader.IS_ASYNC_EXTRA);
             imageView.setImageBitmap(bitmap);
+            if (isAsync) {
+                Animation fadeIn = AnimationUtils.loadAnimation(
+                        imageView.getContext(), android.R.anim.fade_in);
+                imageView.startAnimation(fadeIn);
+            }
         }
     }
 

@@ -74,6 +74,7 @@ public class ImageLoader implements Runnable {
 	public static final int HANDLER_MESSAGE_ID = 0;
 
 	public static final String BITMAP_EXTRA = "droidfu:extra_bitmap";
+	public static final String IS_ASYNC_EXTRA = "yelp:extra_async";
 
 	private static int numAttempts = 3;
 
@@ -335,7 +336,7 @@ public class ImageLoader implements Runnable {
 			}
 			bitmap = BitmapFactory.decodeFile(filename, options);
 			bitmap = applyExifFileAttributes(filename, bitmap);
-			notifyImageLoaded(bitmap);
+			notifyImageLoaded(bitmap, true);
 			return;
 		}
 		int timesTried = 1;
@@ -398,15 +399,20 @@ public class ImageLoader implements Runnable {
 		}
 
 		if (bitmap != null && this.handler != null) {
-			notifyImageLoaded(bitmap);
+			notifyImageLoaded(bitmap, true);
 		}
 	}
 
 	public void notifyImageLoaded(Bitmap bitmap) {
+		notifyImageLoaded(bitmap, false);
+	}
+
+	public void notifyImageLoaded(Bitmap bitmap, boolean isAsync) {
 		Message message = new Message();
 		message.what = HANDLER_MESSAGE_ID;
 		Bundle data = new Bundle();
 		data.putParcelable(BITMAP_EXTRA, bitmap);
+		data.putBoolean(IS_ASYNC_EXTRA, isAsync);
 		message.setData(data);
 		handler.sendMessage(message);
 	}
