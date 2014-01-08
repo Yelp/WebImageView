@@ -59,7 +59,7 @@ public class WebImageView extends ImageView {
 	private long mPriority;
 	private int mReqWidth;
 	private int mReqHeight;
-
+	private boolean mFollowCrossRedirects;
 
 	public WebImageView(Context context, AttributeSet attributes) {
 		super(context, attributes);
@@ -74,6 +74,7 @@ public class WebImageView extends ImageView {
 		setLoadingDrawable(array.getDrawable(R.styleable.WebImageView_loading));
 		mSavePermanently = array.getBoolean(R.styleable.WebImageView_savePermanently, false);
 		mPriority = array.getInt(R.styleable.WebImageView_image_priority, 20);
+		mFollowCrossRedirects = array.getBoolean(R.styleable.WebImageView_followCrossRedirects, false);
 		String url = array.getString(R.styleable.WebImageView_imageUrl);
 		boolean autoLoad = array.getBoolean(R.styleable.WebImageView_autoload, !TextUtils.isEmpty(url));
 		setImageUrl(url, autoLoad, null);
@@ -215,7 +216,8 @@ public class WebImageView extends ImageView {
 		if (!mLoaded) {
 			setImageDrawable(mLoadingDrawable);
 			ImageLoader.start(mUrl, mReqWidth, mReqHeight, new WebImageLoaderHandler(mUrl, this,
-					(Long.MAX_VALUE - SystemClock.elapsedRealtime()) + mPriority, callback), mSavePermanently);
+					(Long.MAX_VALUE - SystemClock.elapsedRealtime()) + mPriority, callback),
+					mSavePermanently, mFollowCrossRedirects);
 		}
 	}
 

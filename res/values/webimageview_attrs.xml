@@ -20,6 +20,8 @@
 			permanently downloaded where it won't be purged from a cache. Defaults to false.
 		-->
 		<attr name="savePermanently" format="boolean"/>
+		<!--  Specifies whether the loader will follow cross HTTP/HTTPS redirects -->
+		<attr name="followCrossRedirects" format="boolean"/>
 		<!--  Specifies the Priority of the image. Lower values should be loaded first -->
 		<attr name="image_priority" format="integer"/>
 	</declare-styleable>
