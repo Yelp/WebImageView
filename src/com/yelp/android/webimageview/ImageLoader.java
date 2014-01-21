@@ -216,7 +216,7 @@ public class ImageLoader implements Runnable {
 	 *            of the cache directory
 	 */
 	public static void start(String imageUrl, ImageLoaderHandler handler, boolean savePermanently) {
-		start(imageUrl, 0, 0, handler, savePermanently);
+		start(imageUrl, 0, 0, handler, savePermanently, false);
 	}
 
 	/**
@@ -238,13 +238,16 @@ public class ImageLoader implements Runnable {
 	 * @param savePermanently
 	 *            If true, the provided image will be saved permanently outside
 	 *            of the cache directory
+	 * @param followCrossRedirects
+	 *            If true, the loader will follow cross HTTP/HTTPS redirects
 	 */
 	public static void start(String imageUrl, int reqWidth, int reqHeight, ImageLoaderHandler handler, 
-			boolean savePermanently) {
+			boolean savePermanently, boolean followCrossRedirects) {
 		ImageLoader loader = new ImageLoader(imageUrl, handler, savePermanently);
 		loader.mPriority = handler.priority;
 		loader.mReqWidth = reqWidth;
 		loader.mReqHeight = reqHeight;
+		loader.mFollowCrossRedirects = followCrossRedirects;
 		Bitmap image = imageCache.get(imageUrl);
 		if (image == null) {
 			// fetch the image in the background
@@ -298,6 +301,7 @@ public class ImageLoader implements Runnable {
 	private int mResponse;
 	private int mReqWidth;
 	private int mReqHeight;
+	private boolean mFollowCrossRedirects;
 
 	ImageLoader(String imageUrl) {
 		this.imageUrl = imageUrl;
@@ -345,30 +349,36 @@ public class ImageLoader implements Runnable {
 			while (timesTried <= numAttempts) {
 				InputStream connectionStream = null;
 				try {
-					URLConnection connection;
+					URLConnection connection = null;
 					URL url = new URL(imageUrl);
-					int numRedirects = 0;
-					while (true) {
+					for (int numRedirects = 0; numRedirects < 3; numRedirects++) {
 						connection = url.openConnection();
-						if (connection instanceof HttpURLConnection) {
-							HttpURLConnection httpConnection = (HttpURLConnection) connection;
-							mResponse = httpConnection.getResponseCode();
-							if (mResponse == 301 || mResponse == 302 || mResponse == 307) {
-								// 301 Moved Permanently, 302 Found, 307 Temporary Redirect
-								// Forward 3 redirects across HTTP/HTTPS protocols
-								url = connection.getURL();
-								numRedirects++;
-								if (numRedirects > 3 || url == null) {
-									return;
-								}
-								continue;
-							} else if (mResponse > 300) {
-								// Catch bad response codes or thisthread will get stuck 
-								// retrying a bad URL
+						if (!(connection instanceof HttpURLConnection)) {
+							break;
+						}
+
+						HttpURLConnection httpConnection = (HttpURLConnection) connection;
+						mResponse = httpConnection.getResponseCode();
+						if (mResponse < 300) {
+							// Found a working response code
+							break;
+						}
+						if (!mFollowCrossRedirects) {
+							return;
+						}
+
+						if (mResponse == 301 || mResponse == 302 || mResponse == 307) {
+							// 301 Moved Permanently, 302 Found, 307 Temporary Redirect
+							// Forward 3 redirects across HTTP/HTTPS protocols
+							url = connection.getURL();
+							if (url == null) {
 								return;
 							}
+						} else {
+							// Other response codes are bad, so catch them or this
+							// thread will get stuck retrying a bad URL
+							return;
 						}
-						break;
 					}
 					connectionStream = connection.getInputStream();
 					if (connectionStream == null) {
