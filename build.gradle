@@ -2,14 +2,8 @@ apply plugin: "android-library"
 
 android {
     compileSdkVersion 8
-    buildToolsVersion "19.0.3"
+    buildToolsVersion "19.1.0"
 
-    buildTypes {
-        release {
-            runProguard false
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-project.txt"
-        }
-    }
     sourceSets {
         main {
             manifest.srcFile "AndroidManifest.xml"
