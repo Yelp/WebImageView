@@ -16,6 +16,7 @@ package com.yelp.android.webimageview;
 
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
@@ -30,6 +31,10 @@ import java.lang.ref.WeakReference;
 import java.util.concurrent.TimeUnit;
 
 public class WebImageView extends ImageView {
+
+	public static final String EXTRA_IMAGE_URL = "image_url";
+
+	public static final String ACTION_INVALID_BUNDLE_URL = "com.yelp.android.webimageview.intent.invalid_bundle_url";
 
 	/*
 	 * Returns a drawable resourceId if the provided string name
@@ -166,7 +171,12 @@ public class WebImageView extends ImageView {
 		} else if (url.startsWith("bundle://")) {
 			url = url.substring("bundle://".length());
 			int resource = getResourceForName(getContext(), url);
-			if (resource != 0) {
+			if (resource == 0) {
+				// Report a bundle:// request that wasn't found in the app.
+				Intent intent = new Intent(ACTION_INVALID_BUNDLE_URL);
+				intent.putExtra(EXTRA_IMAGE_URL, url);
+				getContext().sendBroadcast(intent);
+			} else {
 				setImageResource(resource);
 			}
 		}
