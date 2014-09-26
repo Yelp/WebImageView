@@ -34,7 +34,7 @@ public class WebImageView extends ImageView {
 
 	public static final String EXTRA_IMAGE_URL = "image_url";
 
-	public static final String ACTION_INVALID_BUNDLE_URL = "com.yelp.android.intent.invalid_bundle_url";
+	public static final String ACTION_INVALID_BUNDLE_URL = "com.yelp.android.webimageview.intent.invalid_bundle_url";
 
 	/*
 	 * Returns a drawable resourceId if the provided string name
