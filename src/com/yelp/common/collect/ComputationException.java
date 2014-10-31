@@ -9,7 +9,7 @@
  * governing permissions and limitations under the License.
  */
 
-package com.google.common.collect;
+package com.yelp.common.collect;
 
 /**
  * Wraps an exception that occured during a computation.

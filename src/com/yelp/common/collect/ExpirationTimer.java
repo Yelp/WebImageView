@@ -14,18 +14,13 @@
  * limitations under the License.
  */
 
-package com.google.common.collect;
+package com.yelp.common.collect;
+
+import java.util.Timer;
 
 /**
- * Thrown when a computer function returns null. This subclass exists so
- * that our ReferenceCache adapter can differentiate null output from null
- * keys, but we don't want to make this public otherwise.
- *
- * @author Bob Lee
+ * Timer used for entry expiration in MapMaker.
  */
-class NullOutputException extends NullPointerException {
-  public NullOutputException(String s) {
-    super(s);
-  }
-  private static final long serialVersionUID = 0;
+class ExpirationTimer {
+  static Timer instance = new Timer(true);
 }
