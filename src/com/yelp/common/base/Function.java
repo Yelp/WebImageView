@@ -9,7 +9,7 @@
  * governing permissions and limitations under the License.
  */
 
-package com.google.common.base;
+package com.yelp.common.base;
 
 /**
  * A transformation from one object to another. For example, a {@code

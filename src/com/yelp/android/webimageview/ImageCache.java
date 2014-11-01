@@ -32,7 +32,7 @@ import android.text.TextUtils;
 import android.text.format.DateUtils;
 import android.util.Log;
 
-import com.google.common.collect.MapMaker;
+import com.yelp.common.collect.MapMaker;
 
 import java.io.File;
 import java.io.FileNotFoundException;

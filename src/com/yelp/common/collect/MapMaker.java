@@ -9,7 +9,7 @@
  * governing permissions and limitations under the License.
  */
 
-package com.google.common.collect;
+package com.yelp.common.collect;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -24,12 +24,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.base.FinalizableReferenceQueue;
-import com.google.common.base.FinalizableSoftReference;
-import com.google.common.base.FinalizableWeakReference;
-import com.google.common.base.Function;
-import com.google.common.collect.CustomConcurrentHashMap.ComputingStrategy;
-import com.google.common.collect.CustomConcurrentHashMap.Internals;
+import com.yelp.common.base.FinalizableReferenceQueue;
+import com.yelp.common.base.FinalizableSoftReference;
+import com.yelp.common.base.FinalizableWeakReference;
+import com.yelp.common.base.Function;
+import com.yelp.common.collect.CustomConcurrentHashMap.ComputingStrategy;
+import com.yelp.common.collect.CustomConcurrentHashMap.Internals;
 
 /**
  * A {@link ConcurrentMap} builder, providing any combination of these features:

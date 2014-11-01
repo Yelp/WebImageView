@@ -9,7 +9,7 @@
  * governing permissions and limitations under the License.
  */
 
-package com.google.common.collect;
+package com.yelp.common.collect;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.google.common.base.Function;
+import com.yelp.common.base.Function;
 
 /**
  * A framework for concurrent hash map implementations. The

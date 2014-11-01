@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Google Inc.
+ * Copyright (C) 2007 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,22 @@
  * limitations under the License.
  */
 
-package com.google.common.collect;
+package com.yelp.common.base;
 
 /**
- * Wraps an exception that occured during a computation in a different thread.
+ * Implemented by references that have code to run after garbage collection of
+ * their referents.
  *
+ * @see FinalizableReferenceQueue
  * @author Bob Lee
  */
-public class AsynchronousComputationException extends ComputationException {
+public interface FinalizableReference {
+
   /**
-   * Creates a new instance with the given cause.
+   * Invoked on a background thread after the referent has been garbage
+   * collected unless security restrictions prevented starting a background
+   * thread, in which case this method is invoked when new references
+   * are created.
    */
-  public AsynchronousComputationException(Throwable cause) {
-    super(cause);
-  }
-  private static final long serialVersionUID = 0;
+  void finalizeReferent();
 }

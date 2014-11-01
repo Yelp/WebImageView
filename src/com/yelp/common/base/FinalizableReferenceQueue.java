@@ -16,7 +16,7 @@
  * Excessive logging removed by Yelp in 2011
  */
 
-package com.google.common.base;
+package com.yelp.common.base;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -94,7 +94,7 @@ private static final Logger logger
 	  = Logger.getLogger(FinalizableReferenceQueue.class.getName());
 
 private static final String FINALIZER_CLASS_NAME
-	  = "com.google.common.base.internal.Finalizer";
+	  = "com.yelp.common.base.internal.Finalizer";
 
 /** Reference to Finalizer.startFinalizer(). */
 private static final Method startFinalizer;
