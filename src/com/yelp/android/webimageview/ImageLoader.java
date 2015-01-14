@@ -219,49 +219,65 @@ public class ImageLoader implements Runnable {
 		start(imageUrl, 0, 0, handler, savePermanently, false);
 	}
 
-	/**
-	 * Triggers the image loader for the given image and handler. The image
-	 * loading will be performed concurrently to the UI main thread, using a
-	 * fixed size thread pool. The loaded image will not be automatically posted
-	 * to an ImageView; instead, you can pass a custom
-	 * {@link ImageLoaderHandler} and handle the loaded image yourself (e.g.
-	 * cache it for later use).
-	 *
-	 * @param imageUrl
-	 *            the URL of the image to download
-	 * @param reqWidth 
-	 *            the required width of the image
-	 * @param reqHeight
-	 *            the required height of the image
-	 * @param handler
-	 *            the handler which is used to handle the downloaded image
-	 * @param savePermanently
-	 *            If true, the provided image will be saved permanently outside
-	 *            of the cache directory
-	 * @param followCrossRedirects
-	 *            If true, the loader will follow cross HTTP/HTTPS redirects
-	 */
-	public static void start(String imageUrl, int reqWidth, int reqHeight, ImageLoaderHandler handler, 
-			boolean savePermanently, boolean followCrossRedirects) {
-		ImageLoader loader = new ImageLoader(imageUrl, handler, savePermanently);
-		loader.mPriority = handler.priority;
-		loader.mReqWidth = reqWidth;
-		loader.mReqHeight = reqHeight;
-		loader.mFollowCrossRedirects = followCrossRedirects;
-		Bitmap image = imageCache.get(imageUrl);
-		if (image == null) {
-			// fetch the image in the background
-			executor.execute(loader);
-		} else if (handler instanceof WebImageLoaderHandler) {
-			WebImageView view = ((WebImageLoaderHandler)handler).mView.get();
-			if (view != null) {
-				view.setImageBitmap(image, true);
-				loader.notifyImageLoaded(image);
-			}
-		} else {
-			loader.notifyImageLoaded(image);
-		}
-	}
+    /**
+     * Triggers the image loader for the given image and handler. The image loading will be
+     * performed concurrently to the UI main thread, using a fixed size thread pool. The loaded
+     * image will not be automatically posted to an ImageView; instead, you can pass a custom {@link
+     * ImageLoaderHandler} and handle the loaded image yourself (e.g. cache it for later use).
+     *
+     * @param imageUrl             the URL of the image to download
+     * @param reqWidth             the required width of the image
+     * @param reqHeight            the required height of the image
+     * @param handler              the handler which is used to handle the downloaded image
+     * @param savePermanently      If true, the provided image will be saved permanently outside of
+     *                             the cache directory
+     * @param followCrossRedirects If true, the loader will follow cross HTTP/HTTPS redirects
+     */
+    public static void start(String imageUrl, int reqWidth, int reqHeight,
+            ImageLoaderHandler handler,
+            boolean savePermanently, boolean followCrossRedirects) {
+        start(imageUrl, reqWidth, reqHeight, handler, savePermanently, followCrossRedirects,
+                false);
+    }
+
+    /**
+     * Triggers the image loader for the given image and handler. The image loading will be
+     * performed concurrently to the UI main thread, using a fixed size thread pool. The loaded
+     * image will not be automatically posted to an ImageView; instead, you can pass a custom {@link
+     * ImageLoaderHandler} and handle the loaded image yourself (e.g. cache it for later use).
+     *
+     * @param imageUrl             the URL of the image to download
+     * @param reqWidth             the required width of the image
+     * @param reqHeight            the required height of the image
+     * @param handler              the handler which is used to handle the downloaded image
+     * @param savePermanently      If true, the provided image will be saved permanently outside of
+     *                             the cache directory
+     * @param followCrossRedirects If true, the loader will follow cross HTTP/HTTPS redirects
+     * @param dontLoadFromCache    If true, dont check the imageCahce for the image URL
+     */
+    public static void start(String imageUrl, int reqWidth, int reqHeight,
+            ImageLoaderHandler handler,
+            boolean savePermanently, boolean followCrossRedirects, boolean dontLoadFromCache) {
+        ImageLoader loader = new ImageLoader(imageUrl, handler, savePermanently);
+        loader.mPriority = handler.priority;
+        loader.mReqWidth = reqWidth;
+        loader.mReqHeight = reqHeight;
+        loader.mFollowCrossRedirects = followCrossRedirects;
+        Bitmap image = imageCache.get(imageUrl);
+        if (image == null && !dontLoadFromCache) {
+            // fetch the image in the background
+            executor.execute(loader);
+        } else if (handler instanceof WebImageLoaderHandler) {
+
+            WebImageView view = ((WebImageLoaderHandler) handler).mView.get();
+            if (view != null) {
+                view.setImageBitmap(image, true);
+                loader.notifyImageLoaded(image);
+            }
+        } else {
+            loader.notifyImageLoaded(image);
+        }
+    }
 
 	public static final Set<ImageLoader> getSnapShot() {
 		return REQUESTS.getSnapShotAndClean();
