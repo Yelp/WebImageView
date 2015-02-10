@@ -20,6 +20,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.widget.ImageView;
+
+import java.lang.ref.WeakReference;
+
 /**
  * An ImageLoaderHandler both handles the receiving of an image and acts as a
  * request for image download. Instances of this class can be passed to the
@@ -32,11 +35,11 @@ import android.widget.ImageView;
  */
 public class ImageLoaderHandler extends Handler {
 
-    private final ImageView imageView;
+    private final WeakReference<ImageView> mWeakImageView;
     protected long priority;
 
     public ImageLoaderHandler(ImageView imageView) {
-        this.imageView = imageView;
+        mWeakImageView = new WeakReference<ImageView>(imageView);
         priority = 0;
     }
 
@@ -45,12 +48,14 @@ public class ImageLoaderHandler extends Handler {
         if (msg.what == ImageLoader.HANDLER_MESSAGE_ID) {
             Bundle data = msg.getData();
             Bitmap bitmap = data.getParcelable(ImageLoader.BITMAP_EXTRA);
-            imageView.setImageBitmap(bitmap);
+            if (mWeakImageView.get() != null) {
+                mWeakImageView.get().setImageBitmap(bitmap);
+            }
         }
     }
 
     ImageView getImageView() {
-        return imageView;
+        return mWeakImageView.get();
     }
 
 }
