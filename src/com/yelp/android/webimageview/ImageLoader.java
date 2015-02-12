@@ -253,7 +253,7 @@ public class ImageLoader implements Runnable {
 			// fetch the image in the background
 			executor.execute(loader);
 		} else if (handler instanceof WebImageLoaderHandler) {
-			WebImageView view = ((WebImageLoaderHandler)handler).mView.get();
+			WebImageView view = (WebImageView)handler.getImageView();
 			if (view != null) {
 				view.setImageBitmap(image, true);
 				loader.notifyImageLoaded(image);

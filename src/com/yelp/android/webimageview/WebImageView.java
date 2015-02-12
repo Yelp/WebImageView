@@ -257,13 +257,11 @@ public class WebImageView extends ImageView {
 	 */
 	public static class WebImageLoaderHandler extends ImageLoaderHandler {
 		String mUrl;
-		public final WeakReference<WebImageView> mView;
 		private final WeakReference<ImageLoadedCallback> mCallback;
 
 		public WebImageLoaderHandler(String url, WebImageView view,
 				long priority, ImageLoadedCallback callback) {
 			super(view);
-			mView = new WeakReference<WebImageView>(view);
 			mUrl = url;
 			mCallback = new WeakReference<WebImageView.ImageLoadedCallback>(callback);
 			super.priority = priority;
@@ -271,7 +269,7 @@ public class WebImageView extends ImageView {
 
 		@Override
 		public void handleMessage(Message msg) {
-			WebImageView view = mView.get();
+			WebImageView view = (WebImageView)getImageView();
 			if (view == null) {
 				return;
 			}
@@ -282,7 +280,7 @@ public class WebImageView extends ImageView {
 					view.mLoaded = true;
 					ImageLoadedCallback cb = mCallback.get();
 					if (cb != null) {
-						cb.imageLoaded(mView.get());
+						cb.imageLoaded(view);
 					}
 				}
 			}
