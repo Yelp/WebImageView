@@ -255,7 +255,7 @@ public class WebImageView extends ImageView {
 	 *
 	 * @author greg/pretz/alexd
 	 */
-	public static class WebImageLoaderHandler extends ImageLoaderHandler {
+	public static class WebImageLoaderHandler extends ImageLoaderHandler<WebImageView> {
 		String mUrl;
 		private final WeakReference<ImageLoadedCallback> mCallback;
 
@@ -269,7 +269,7 @@ public class WebImageView extends ImageView {
 
 		@Override
 		public void handleMessage(Message msg) {
-			WebImageView view = (WebImageView)getImageView();
+			WebImageView view = getImageView();
 			if (view == null) {
 				return;
 			}

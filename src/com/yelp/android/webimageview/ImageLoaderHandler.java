@@ -33,13 +33,13 @@ import java.lang.ref.WeakReference;
  * @author Matthias Käppler, Greg Giacovelli
  *
  */
-public class ImageLoaderHandler extends Handler {
+public class ImageLoaderHandler<T extends ImageView> extends Handler {
 
-    private final WeakReference<ImageView> mWeakImageView;
+    private final WeakReference<T> mWeakImageView;
     protected long priority;
 
-    public ImageLoaderHandler(ImageView imageView) {
-        mWeakImageView = new WeakReference<ImageView>(imageView);
+    public ImageLoaderHandler(T imageView) {
+        mWeakImageView = new WeakReference<T>(imageView);
         priority = 0;
     }
 
@@ -54,7 +54,7 @@ public class ImageLoaderHandler extends Handler {
         }
     }
 
-    ImageView getImageView() {
+    T getImageView() {
         return mWeakImageView.get();
     }
 
