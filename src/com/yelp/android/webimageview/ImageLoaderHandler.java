@@ -19,29 +19,27 @@ import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.widget.ImageView;
 
 import java.lang.ref.WeakReference;
 
 /**
- * An ImageLoaderHandler both handles the receiving of an image and acts as a
- * request for image download. Instances of this class can be passed to the
- * ImageLoader and are notified when the image loading has been completed.
- * ImageLoaderHandler instances with higher priority (lower absolute value),
- * are downloaded before others.
+ * An ImageLoaderHandler both handles the receiving of an image and acts as a request for image
+ * download. Instances of this class can be passed to the ImageLoader and are notified when the
+ * image loading has been completed. ImageLoaderHandler instances with higher priority (lower
+ * absolute value), are downloaded before others.
  *
  * @author Matthias Käppler, Greg Giacovelli
- *
  */
-public class ImageLoaderHandler<T extends ImageView> extends Handler {
+public class ImageLoaderHandler<ImageView> extends Handler {
 
-    private final WeakReference<T> mWeakImageView;
+    private final WeakReference<ImageView> mWeakImageView;
     protected long priority;
 
-    public ImageLoaderHandler(T imageView) {
-        mWeakImageView = new WeakReference<T>(imageView);
+    public ImageLoaderHandler(ImageView imageView) {
+        mWeakImageView = new WeakReference<ImageView>(imageView);
         priority = 0;
     }
+
 
     @Override
     public void handleMessage(Message msg) {
@@ -49,12 +47,12 @@ public class ImageLoaderHandler<T extends ImageView> extends Handler {
             Bundle data = msg.getData();
             Bitmap bitmap = data.getParcelable(ImageLoader.BITMAP_EXTRA);
             if (mWeakImageView.get() != null) {
-                mWeakImageView.get().setImageBitmap(bitmap);
+                ((WebImageView)mWeakImageView.get()).setImageBitmap(bitmap);
             }
         }
     }
 
-    T getImageView() {
+    ImageView getImageView() {
         return mWeakImageView.get();
     }
 
