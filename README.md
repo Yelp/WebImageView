@@ -1,3 +1,8 @@
+# DEPRECATED
+
+WebImageView is deprecated and no further development will be taking place. Existing versions will continue
+to function, but we recommend that you check out alternative libraries.
+
 WebImageView
 ============
 
